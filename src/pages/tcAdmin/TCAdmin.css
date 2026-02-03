@@ -1,0 +1,31 @@
+/* TC Admin Module Styles */
+
+.filter-buttons {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.request-details {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
+.detail-section {
+    margin-bottom: var(--spacing-md);
+}
+
+.detail-text {
+    background: var(--gray-50);
+    padding: var(--spacing-md);
+    border-radius: var(--radius-md);
+    margin: var(--spacing-xs) 0 0 0;
+    color: var(--gray-800);
+    line-height: 1.6;
+}
+
+.action-buttons {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-lg);
+}

@@ -1,0 +1,117 @@
+.topbar {
+    height: 70px;
+    background-color: var(--white);
+    border-bottom: 1px solid var(--gray-200);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 var(--spacing-xl);
+    box-shadow: var(--shadow-sm);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+}
+
+.topbar-left {
+    flex: 1;
+}
+
+.topbar-title {
+    font-size: var(--font-size-2xl);
+    font-weight: 600;
+    color: var(--gray-900);
+    margin: 0;
+}
+
+.topbar-right {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xl);
+}
+
+.topbar-notifications {
+    position: relative;
+    cursor: pointer;
+}
+
+.notification-icon {
+    font-size: var(--font-size-2xl);
+    display: flex;
+    align-items: center;
+    transition: transform 0.2s;
+}
+
+.notification-icon:hover {
+    transform: scale(1.1);
+}
+
+.topbar-user {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--spacing-xs);
+}
+
+.user-name {
+    font-size: var(--font-size-base);
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.user-role {
+    font-size: var(--font-size-xs);
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+    color: var(--white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.user-avatar:hover {
+    transform: scale(1.05);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .topbar {
+        padding: 0 var(--spacing-md);
+    }
+
+    .topbar-title {
+        font-size: var(--font-size-lg);
+    }
+
+    .user-info {
+        display: none;
+    }
+
+    .topbar-right {
+        gap: var(--spacing-md);
+    }
+
+    .notification-icon {
+        font-size: var(--font-size-xl);
+    }
+
+    .user-avatar {
+        width: 36px;
+        height: 36px;
+        font-size: var(--font-size-base);
+    }
+}
