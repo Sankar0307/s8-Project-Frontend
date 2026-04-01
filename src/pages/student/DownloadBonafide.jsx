@@ -1,20 +1,59 @@
-import { studentData } from '../../data/mockData'
+import { useState, useEffect } from 'react'
+import { useAuth } from '../../context/AuthContext'
+import { studentApi, bonafideApi } from '../../services/api'
 import './Student.css'
 
 const DownloadBonafide = () => {
-  const { profile, bonafideRequests, feeStructure } = studentData
-  
-  // Get the first approved bonafide request
-  const approvedRequest = bonafideRequests.find(req => req.status === 'Approved')
-  const showFeeStructure = approvedRequest?.bonafideType === 'With Fee Structure'
+  const { userId } = useAuth()
+  const [student, setStudent] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [downloading, setDownloading] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (userId) {
+      studentApi.getById(userId)
+        .then(data => setStudent(data))
+        .catch(() => setError('Failed to load student profile'))
+        .finally(() => setLoading(false))
+    }
+  }, [userId])
 
   const handlePrint = () => {
     window.print()
   }
 
-  const handleDownload = () => {
-    alert('Download PDF feature - UI only (backend integration pending)')
+  const handleDownload = async () => {
+    if (!student) return
+    setDownloading(true)
+    setError('')
+    try {
+      const url = bonafideApi.download(student.id)
+      const response = await fetch(url)
+      if (!response.ok) {
+        const msg = await response.text().catch(() => 'Download failed')
+        throw new Error(msg || `Server returned ${response.status}`)
+      }
+      const blob = await response.blob()
+      const objectUrl = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = objectUrl
+      a.download = `bonafide_${student.name || student.id}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(objectUrl)
+    } catch (err) {
+      setError(err.message || 'Failed to download PDF')
+    } finally {
+      setDownloading(false)
+    }
   }
+
+  if (loading) return <div className="page-container"><p>Loading...</p></div>
+
+  const profile = student || {}
+  const academicYear = `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`
 
   return (
     <div className="page-container">
@@ -23,12 +62,14 @@ const DownloadBonafide = () => {
         <p className="page-subtitle">Print or download your bonafide certificate</p>
       </div>
 
+      {error && <div className="alert alert-danger">{error}</div>}
+
       <div style={{ marginBottom: 'var(--spacing-lg)', display: 'flex', gap: 'var(--spacing-md)' }}>
         <button onClick={handlePrint} className="btn btn-primary">
           🖨️ Print Preview
         </button>
-        <button onClick={handleDownload} className="btn btn-success">
-          📥 Download PDF
+        <button onClick={handleDownload} className="btn btn-success" disabled={downloading || !student}>
+          {downloading ? '⏳ Generating PDF...' : '📥 Download PDF'}
         </button>
       </div>
 
@@ -42,61 +83,35 @@ const DownloadBonafide = () => {
 
         <div className="tc-content">
           <p style={{ marginBottom: 'var(--spacing-lg)', lineHeight: 1.8 }}>
-            This is to certify that <strong>{profile.name}</strong>, bearing Register Number{' '}
-            <strong>{profile.registerNumber}</strong>, is a bonafide student of this institution,
-            currently pursuing <strong>{profile.year}</strong> in the Department of{' '}
-            <strong>{profile.department}</strong> for the Academic Year{' '}
-            <strong>{feeStructure.academicYear}</strong>.
+            This is to certify that <strong>{profile.name || 'N/A'}</strong>, bearing Register Number{' '}
+            <strong>{profile.registerNumber || String(profile.id || '')}</strong>, is a bonafide student of this institution,
+            currently pursuing <strong>{profile.year ? `${profile.year}${['st','nd','rd'][profile.year - 1] || 'th'} Year` : 'N/A'}</strong> in the Department of{' '}
+            <strong>{profile.department || 'N/A'}</strong> for the Academic Year{' '}
+            <strong>{academicYear}</strong>.
           </p>
-
-          {approvedRequest && (
-            <p style={{ marginBottom: 'var(--spacing-lg)', lineHeight: 1.8 }}>
-              This certificate is issued for the purpose of <strong>{approvedRequest.reason}</strong>.
-            </p>
-          )}
 
           <div className="tc-details">
             <div className="tc-detail-row">
               <strong>Student Name:</strong>
-              <span>{profile.name}</span>
+              <span>{profile.name || 'N/A'}</span>
             </div>
             <div className="tc-detail-row">
               <strong>Register Number:</strong>
-              <span>{profile.registerNumber}</span>
+              <span>{profile.registerNumber || String(profile.id || '')}</span>
             </div>
             <div className="tc-detail-row">
               <strong>Department:</strong>
-              <span>{profile.department}</span>
+              <span>{profile.department || 'N/A'}</span>
             </div>
             <div className="tc-detail-row">
               <strong>Academic Year:</strong>
-              <span>{feeStructure.academicYear}</span>
+              <span>{academicYear}</span>
             </div>
             <div className="tc-detail-row">
               <strong>Current Year:</strong>
-              <span>{profile.year}</span>
+              <span>{profile.year ? `Year ${profile.year}` : 'N/A'}</span>
             </div>
           </div>
-
-          {showFeeStructure && (
-            <>
-              <h4 style={{ marginTop: 'var(--spacing-xl)', marginBottom: 'var(--spacing-md)', color: 'var(--gray-900)' }}>
-                Fee Structure for Academic Year {feeStructure.academicYear}
-              </h4>
-              <div className="tc-details">
-                {feeStructure.fees.map((fee, index) => (
-                  <div className="tc-detail-row" key={index}>
-                    <strong>{fee.type}:</strong>
-                    <span>₹ {fee.amount.toLocaleString('en-IN')}</span>
-                  </div>
-                ))}
-                <div className="tc-detail-row" style={{ borderTop: '2px solid var(--gray-900)', paddingTop: 'var(--spacing-sm)', marginTop: 'var(--spacing-sm)' }}>
-                  <strong>Total Amount:</strong>
-                  <strong>₹ {feeStructure.total.toLocaleString('en-IN')}</strong>
-                </div>
-              </div>
-            </>
-          )}
 
           <div className="tc-footer">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>

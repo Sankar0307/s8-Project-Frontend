@@ -1,14 +1,27 @@
-import { studentData } from '../../data/mockData'
+import { useState, useEffect } from 'react'
+import { feeApi } from '../../services/api'
 import './Student.css'
 
 const FeeStructureDetails = () => {
-  const { feeStructure } = studentData
+  const [fees, setFees] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    feeApi.getAll()
+      .then(data => setFees(data))
+      .catch(err => console.error('Fee structure error:', err))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const total = fees.reduce((sum, fee) => sum + (fee.amount || 0), 0)
+
+  if (loading) return <div className="page-container"><p>Loading fee structure...</p></div>
 
   return (
     <div className="page-container">
       <div className="page-header">
         <h2 className="page-title">Detailed Fee Structure</h2>
-        <p className="page-subtitle">Academic Year: {feeStructure.academicYear}</p>
+        <p className="page-subtitle">Current Academic Year</p>
       </div>
 
       <div className="card" style={{ maxWidth: '800px' }}>
@@ -17,9 +30,9 @@ const FeeStructureDetails = () => {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
-          {feeStructure.fees.map((fee, index) => (
+          {fees.map((fee) => (
             <div 
-              key={index}
+              key={fee.id}
               style={{
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -29,9 +42,9 @@ const FeeStructureDetails = () => {
                 borderLeft: '3px solid var(--primary-blue)'
               }}
             >
-              <span style={{ fontWeight: 500, color: 'var(--gray-700)' }}>{fee.type}</span>
+              <span style={{ fontWeight: 500, color: 'var(--gray-700)' }}>{fee.feeType}</span>
               <span style={{ fontWeight: 600, color: 'var(--gray-900)', fontSize: 'var(--font-size-lg)' }}>
-                ₹ {fee.amount.toLocaleString('en-IN')}
+                ₹ {fee.amount?.toLocaleString('en-IN')}
               </span>
             </div>
           ))}
@@ -49,7 +62,7 @@ const FeeStructureDetails = () => {
           >
             <span style={{ fontWeight: 700, fontSize: 'var(--font-size-lg)' }}>Total Amount</span>
             <span style={{ fontWeight: 700, fontSize: 'var(--font-size-2xl)' }}>
-              ₹ {feeStructure.total.toLocaleString('en-IN')}
+              ₹ {total.toLocaleString('en-IN')}
             </span>
           </div>
         </div>

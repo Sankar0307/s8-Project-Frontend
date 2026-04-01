@@ -1,53 +1,52 @@
+import { useState, useEffect } from 'react'
 import Table from '../../components/Table'
-import { tcData } from '../../data/mockData'
+import { tcApi } from '../../services/api'
 import './TCAdmin.css'
 
 const TCHistory = () => {
-  const { tcHistory } = tcData
+  const [requests, setRequests] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    tcApi.getAllRequests()
+      .then(data => {
+        // Show approved/rejected (processed) requests as history
+        setRequests(data.filter(r => r.status !== 'PENDING'))
+      })
+      .catch(err => console.error('TC history error:', err))
+      .finally(() => setLoading(false))
+  }, [])
 
   const columns = [
-    { header: 'TC Number', field: 'tcNumber' },
-    { header: 'Register No', field: 'registerNo' },
-    { header: 'Name', field: 'name' },
-    { header: 'Department', field: 'department' },
-    { header: 'Issued Date', field: 'issuedDate' }
+    { header: 'ID', field: 'id' },
+    { header: 'Student ID', field: 'studentId' },
+    { header: 'Applied Date', field: 'appliedDate' },
+    { header: 'Reason', field: 'reason' },
+    { 
+      header: 'Status', 
+      render: (row) => (
+        <span className={`badge badge-${row.status === 'APPROVED' ? 'success' : 'danger'}`}>
+          {row.status}
+        </span>
+      )
+    },
+    { header: 'Remarks', field: 'remarks' }
   ]
 
-  const actions = [
-    {
-      label: 'View TC',
-      className: 'btn-primary',
-      onClick: (row) => alert(`Viewing TC for ${row.name}`)
-    },
-    {
-      label: 'Download',
-      className: 'btn-secondary',
-      onClick: (row) => alert(`Downloading TC ${row.tcNumber}`)
-    },
-    {
-      label: 'Print',
-      className: 'btn-secondary',
-      onClick: (row) => alert(`Printing TC ${row.tcNumber}`)
-    }
-  ]
+  if (loading) return <div className="page-container"><p>Loading TC history...</p></div>
 
   return (
     <div className="page-container">
       <div className="page-header">
         <h2 className="page-title">TC History</h2>
-        <p className="page-subtitle">View all issued transfer certificates</p>
+        <p className="page-subtitle">View all processed transfer certificate requests</p>
       </div>
 
       <div className="card">
         <div className="card-header">
-          <h3 className="card-title">Issued Transfer Certificates</h3>
+          <h3 className="card-title">Processed TC Requests</h3>
         </div>
-        <Table 
-          columns={columns} 
-          data={tcHistory} 
-          actions={actions}
-          searchPlaceholder="Search by TC number, register number, or name..."
-        />
+        <Table columns={columns} data={requests} />
       </div>
     </div>
   )

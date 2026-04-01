@@ -1,10 +1,10 @@
 .dashboard-card {
     background: var(--white);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-md);
-    padding: var(--spacing-lg);
-    transition: transform 0.2s, box-shadow 0.2s;
-    border-left: 4px solid var(--primary-blue);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-card);
+    padding: var(--spacing-xl);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border-left: 4px solid var(--secondary-peach);
 }
 
 .dashboard-card:hover {

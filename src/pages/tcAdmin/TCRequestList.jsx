@@ -1,40 +1,40 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Table from '../../components/Table'
-import { tcData } from '../../data/mockData'
+import { tcApi } from '../../services/api'
 import './TCAdmin.css'
 
 const TCRequestList = () => {
   const [filter, setFilter] = useState('All')
-  const { tcRequests } = tcData
+  const [tcRequests, setTcRequests] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    tcApi.getAllRequests()
+      .then(data => setTcRequests(data))
+      .catch(err => console.error('TC requests error:', err))
+      .finally(() => setLoading(false))
+  }, [])
 
   const filteredRequests = filter === 'All' 
     ? tcRequests 
-    : tcRequests.filter(r => r.status === filter)
+    : tcRequests.filter(r => r.status === filter.toUpperCase())
 
   const columns = [
-    { header: 'Register No', field: 'registerNo' },
-    { header: 'Name', field: 'name' },
-    { header: 'Department', field: 'department' },
-    { header: 'Year', field: 'year' },
+    { header: 'ID', field: 'id' },
+    { header: 'Student ID', field: 'studentId' },
     { header: 'Applied Date', field: 'appliedDate' },
     { header: 'Reason', field: 'reason' },
     { 
       header: 'Status', 
       render: (row) => (
-        <span className={`badge badge-${row.status === 'Approved' ? 'success' : row.status === 'Pending' ? 'warning' : 'danger'}`}>
+        <span className={`badge badge-${row.status === 'APPROVED' ? 'success' : row.status === 'PENDING' ? 'warning' : 'danger'}`}>
           {row.status}
         </span>
       )
     }
   ]
 
-  const actions = [
-    {
-      label: 'View Details',
-      className: 'btn-primary',
-      onClick: (row) => alert(`Viewing details for ${row.name}`)
-    }
-  ]
+  if (loading) return <div className="page-container"><p>Loading TC requests...</p></div>
 
   return (
     <div className="page-container">
@@ -48,34 +48,19 @@ const TCRequestList = () => {
           <div className="flex justify-between items-center">
             <h3 className="card-title">All TC Requests</h3>
             <div className="filter-buttons">
-              <button 
-                className={`btn btn-sm ${filter === 'All' ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => setFilter('All')}
-              >
-                All
-              </button>
-              <button 
-                className={`btn btn-sm ${filter === 'Pending' ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => setFilter('Pending')}
-              >
-                Pending
-              </button>
-              <button 
-                className={`btn btn-sm ${filter === 'Approved' ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => setFilter('Approved')}
-              >
-                Approved
-              </button>
-              <button 
-                className={`btn btn-sm ${filter === 'Rejected' ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => setFilter('Rejected')}
-              >
-                Rejected
-              </button>
+              {['All', 'Pending', 'Approved', 'Rejected'].map(f => (
+                <button 
+                  key={f}
+                  className={`btn btn-sm ${filter === f ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setFilter(f)}
+                >
+                  {f}
+                </button>
+              ))}
             </div>
           </div>
         </div>
-        <Table columns={columns} data={filteredRequests} actions={actions} />
+        <Table columns={columns} data={filteredRequests} />
       </div>
     </div>
   )

@@ -1,19 +1,28 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Table from '../../components/Table'
 import FormInput from '../../components/FormInput'
-import { accountsData } from '../../data/mockData'
+import { feeApi } from '../../services/api'
 import './Accounts.css'
 
 const FeeStructure = () => {
-  const [feeStructures, setFeeStructures] = useState(accountsData.feeStructures)
+  const [feeStructures, setFeeStructures] = useState([])
   const [showForm, setShowForm] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [formData, setFormData] = useState({
     feeType: '',
     amount: '',
     year: '',
-    department: '',
-    semester: ''
+    department: ''
   })
+
+  const loadFees = () => {
+    feeApi.getAll()
+      .then(data => setFeeStructures(data))
+      .catch(err => console.error('Fee load error:', err))
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(() => { loadFees() }, [])
 
   const handleChange = (e) => {
     setFormData({
@@ -22,45 +31,32 @@ const FeeStructure = () => {
     })
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    const newFee = {
-      id: feeStructures.length + 1,
-      ...formData
-    }
-    setFeeStructures([...feeStructures, newFee])
-    setFormData({ feeType: '', amount: '', year: '', department: '', semester: '' })
-    setShowForm(false)
-    alert('Fee structure added successfully!')
-  }
-
-  const handleDelete = (row) => {
-    if (confirm(`Delete ${row.feeType}?`)) {
-      setFeeStructures(feeStructures.filter(f => f.id !== row.id))
-      alert('Fee structure deleted!')
+    try {
+      await feeApi.create({
+        feeType: formData.feeType,
+        amount: Number(formData.amount),
+        year: Number(formData.year) || 1,
+        department: formData.department
+      })
+      setFormData({ feeType: '', amount: '', year: '', department: '' })
+      setShowForm(false)
+      alert('Fee structure added successfully!')
+      loadFees()
+    } catch (err) {
+      alert('Failed to add fee structure: ' + err.message)
     }
   }
 
   const columns = [
     { header: 'Fee Type', field: 'feeType' },
-    { header: 'Amount', render: (row) => `₹${row.amount.toLocaleString()}` },
+    { header: 'Amount', render: (row) => `₹${row.amount?.toLocaleString()}` },
     { header: 'Year', field: 'year' },
-    { header: 'Department', field: 'department' },
-    { header: 'Semester', field: 'semester' }
+    { header: 'Department', field: 'department' }
   ]
 
-  const actions = [
-    {
-      label: 'Edit',
-      className: 'btn-secondary',
-      onClick: (row) => alert(`Edit ${row.feeType}`)
-    },
-    {
-      label: 'Delete',
-      className: 'btn-danger',
-      onClick: handleDelete
-    }
-  ]
+  if (loading) return <div className="page-container"><p>Loading fee structures...</p></div>
 
   return (
     <div className="page-container">
@@ -108,7 +104,7 @@ const FeeStructure = () => {
                 name="year"
                 value={formData.year}
                 onChange={handleChange}
-                placeholder="e.g. 1st Year or All"
+                placeholder="e.g. 1 or 2"
                 required
               />
               <FormInput
@@ -117,16 +113,7 @@ const FeeStructure = () => {
                 name="department"
                 value={formData.department}
                 onChange={handleChange}
-                placeholder="e.g. CSE or All"
-                required
-              />
-              <FormInput
-                label="Semester"
-                type="text"
-                name="semester"
-                value={formData.semester}
-                onChange={handleChange}
-                placeholder="e.g. 1st Semester or Both"
+                placeholder="e.g. Computer Science"
                 required
               />
             </div>
@@ -141,7 +128,7 @@ const FeeStructure = () => {
         <div className="card-header">
           <h3 className="card-title">Fee Structures</h3>
         </div>
-        <Table columns={columns} data={feeStructures} actions={actions} />
+        <Table columns={columns} data={feeStructures} />
       </div>
     </div>
   )

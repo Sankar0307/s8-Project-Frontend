@@ -1,32 +1,62 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import FormInput from '../../components/FormInput'
-import { tcData } from '../../data/mockData'
+import { tcApi } from '../../services/api'
 import './TCAdmin.css'
 
 const ApproveTCRequest = () => {
-  const pendingRequest = tcData.tcRequests.find(r => r.status === 'Pending')
+  const [pendingRequests, setPendingRequests] = useState([])
+  const [currentRequest, setCurrentRequest] = useState(null)
   const [remarks, setRemarks] = useState('')
   const [success, setSuccess] = useState('')
+  const [loading, setLoading] = useState(true)
 
-  const handleApprove = () => {
-    if (confirm(`Approve TC request for ${pendingRequest?.name}?`)) {
-      setSuccess('approved')
-      setTimeout(() => setSuccess(''), 3000)
+  const loadRequests = () => {
+    tcApi.getAllRequests()
+      .then(data => {
+        const pending = data.filter(r => r.status === 'PENDING')
+        setPendingRequests(pending)
+        setCurrentRequest(pending.length > 0 ? pending[0] : null)
+      })
+      .catch(err => console.error('Load error:', err))
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(() => { loadRequests() }, [])
+
+  const handleApprove = async () => {
+    if (!currentRequest) return
+    if (confirm(`Approve TC request #${currentRequest.id}?`)) {
+      try {
+        await tcApi.approve(currentRequest.id)
+        setSuccess('approved')
+        setTimeout(() => { setSuccess(''); loadRequests() }, 2000)
+      } catch (err) {
+        alert('Failed to approve: ' + err.message)
+      }
     }
   }
 
-  const handleReject = () => {
+  const handleReject = async () => {
+    if (!currentRequest) return
     if (!remarks) {
       alert('Please provide remarks for rejection')
       return
     }
-    if (confirm(`Reject TC request for ${pendingRequest?.name}?`)) {
-      setSuccess('rejected')
-      setTimeout(() => setSuccess(''), 3000)
+    if (confirm(`Reject TC request #${currentRequest.id}?`)) {
+      try {
+        await tcApi.reject(currentRequest.id, remarks)
+        setSuccess('rejected')
+        setRemarks('')
+        setTimeout(() => { setSuccess(''); loadRequests() }, 2000)
+      } catch (err) {
+        alert('Failed to reject: ' + err.message)
+      }
     }
   }
 
-  if (!pendingRequest) {
+  if (loading) return <div className="page-container"><p>Loading requests...</p></div>
+
+  if (!currentRequest) {
     return (
       <div className="page-container">
         <div className="page-header">
@@ -43,14 +73,14 @@ const ApproveTCRequest = () => {
     <div className="page-container">
       <div className="page-header">
         <h2 className="page-title">Approve/Reject TC Request</h2>
-        <p className="page-subtitle">Review and take action on TC requests</p>
+        <p className="page-subtitle">Review and take action on TC requests ({pendingRequests.length} pending)</p>
       </div>
 
       {success && (
         <div className={`alert alert-${success === 'approved' ? 'success' : 'danger'}`}>
           {success === 'approved' 
-            ? `✅ TC request approved for ${pendingRequest.name}!`
-            : `❌ TC request rejected for ${pendingRequest.name}!`
+            ? `✅ TC request #${currentRequest.id} approved!`
+            : `❌ TC request #${currentRequest.id} rejected!`
           }
         </div>
       )}
@@ -58,46 +88,36 @@ const ApproveTCRequest = () => {
       <div className="grid grid-cols-2">
         <div className="card">
           <div className="card-header">
-            <h3 className="card-title">Student Details</h3>
+            <h3 className="card-title">Request Details</h3>
           </div>
-          
           <div className="tc-status-details">
             <div className="status-row">
-              <span className="status-label">Name:</span>
-              <span>{pendingRequest.name}</span>
+              <span className="status-label">Request ID:</span>
+              <span>{currentRequest.id}</span>
             </div>
             <div className="status-row">
-              <span className="status-label">Register No:</span>
-              <span>{pendingRequest.registerNo}</span>
-            </div>
-            <div className="status-row">
-              <span className="status-label">Department:</span>
-              <span>{pendingRequest.department}</span>
-            </div>
-            <div className="status-row">
-              <span className="status-label">Year:</span>
-              <span>{pendingRequest.year}</span>
+              <span className="status-label">Student ID:</span>
+              <span>{currentRequest.studentId}</span>
             </div>
             <div className="status-row">
               <span className="status-label">Applied Date:</span>
-              <span>{pendingRequest.appliedDate}</span>
+              <span>{currentRequest.appliedDate}</span>
             </div>
             <div className="status-row">
               <span className="status-label">Status:</span>
-              <span className="badge badge-warning">{pendingRequest.status}</span>
+              <span className="badge badge-warning">{currentRequest.status}</span>
             </div>
           </div>
         </div>
 
         <div className="card">
           <div className="card-header">
-            <h3 className="card-title">Request Details</h3>
+            <h3 className="card-title">Take Action</h3>
           </div>
-          
           <div className="request-details">
             <div className="detail-section">
               <label className="field-label">Reason for TC:</label>
-              <p className="detail-text">{pendingRequest.reason}</p>
+              <p className="detail-text">{currentRequest.reason}</p>
             </div>
 
             <FormInput

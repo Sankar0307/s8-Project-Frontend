@@ -1,18 +1,19 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import { mockUsers } from '../../data/mockData'
+import { authApi } from '../../services/api'
 import './Auth.css'
 
 const Login = () => {
   const navigate = useNavigate()
   const { login } = useAuth()
   const [formData, setFormData] = useState({
-    username: '',
+    email: '',
     password: '',
     role: ''
   })
   const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleChange = (e) => {
     setFormData({
@@ -22,7 +23,7 @@ const Login = () => {
     setError('')
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     
     if (!formData.role) {
@@ -30,19 +31,34 @@ const Login = () => {
       return
     }
 
-    if (!formData.username || !formData.password) {
-      setError('Please enter username and password')
+    if (!formData.email || !formData.password) {
+      setError('Please enter email and password')
       return
     }
 
-    // Dummy authentication logic
-    const userCredentials = mockUsers[formData.role]
-    
-    if (formData.username === userCredentials.username && formData.password === userCredentials.password) {
-      login(userCredentials.data, formData.role)
-      navigate(`/${formData.role}/dashboard`)
-    } else {
-      setError('Invalid credentials')
+    setIsLoading(true)
+    try {
+      const response = await authApi.login(formData.email, formData.password)
+      
+      // Map backend role to frontend role
+      const roleMap = {
+        'ADMIN': 'admin',
+        'STUDENT': 'student',
+        'ACCOUNTS': 'accounts',
+        'TCADMIN': 'tcadmin'
+      }
+      const frontendRole = roleMap[response.role] || formData.role
+
+      login(
+        { name: response.name, email: formData.email },
+        frontendRole,
+        response.userId
+      )
+      navigate(`/${frontendRole}/dashboard`)
+    } catch (err) {
+      setError(err.message || 'Invalid credentials')
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -77,14 +93,14 @@ const Login = () => {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Username *</label>
+            <label className="form-label">Email *</label>
             <input
               type="text"
-              name="username"
-              value={formData.username}
+              name="email"
+              value={formData.email}
               onChange={handleChange}
               className="form-input"
-              placeholder="Enter your username"
+              placeholder="Enter your email"
               required
             />
           </div>
@@ -108,8 +124,8 @@ const Login = () => {
             </label>
           </div>
 
-          <button type="submit" className="btn btn-primary btn-block">
-            Login
+          <button type="submit" className="btn btn-primary btn-block" disabled={isLoading}>
+            {isLoading ? 'Logging in...' : 'Login'}
           </button>
 
           <div className="auth-footer">
@@ -118,12 +134,12 @@ const Login = () => {
         </form>
 
         <div className="auth-demo">
-          <p className="demo-title">Demo Credentials:</p>
+          <p className="demo-title">Demo Users (create in DB first):</p>
           <ul className="demo-list">
-            <li>Student: username: <strong>student</strong>, password: <strong>student123</strong></li>
-            <li>Accounts: username: <strong>accounts</strong>, password: <strong>accounts123</strong></li>
-            <li>TC Admin: username: <strong>tcadmin</strong>, password: <strong>tcadmin123</strong></li>
-            <li>Admin: username: <strong>admin</strong>, password: <strong>admin123</strong></li>
+            <li>Student: email: <strong>student@andaman.edu</strong>, pass: <strong>student123</strong></li>
+            <li>Accounts: email: <strong>accounts@andaman.edu</strong>, pass: <strong>accounts123</strong></li>
+            <li>TC Admin: email: <strong>tcadmin@andaman.edu</strong>, pass: <strong>tcadmin123</strong></li>
+            <li>Admin: email: <strong>admin@andaman.edu</strong>, pass: <strong>admin123</strong></li>
           </ul>
         </div>
       </div>

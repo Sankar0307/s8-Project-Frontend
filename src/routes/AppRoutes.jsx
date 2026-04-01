@@ -5,6 +5,9 @@ import { useAuth } from '../context/AuthContext'
 import Login from '../pages/auth/Login'
 import ForgotPassword from '../pages/auth/ForgotPassword'
 
+// Public Pages
+import VerifyTC from '../pages/VerifyTC'
+
 // Student Pages
 import StudentDashboard from '../pages/student/StudentDashboard'
 import StudentProfile from '../pages/student/StudentProfile'
@@ -146,6 +149,9 @@ const AppRoutes = () => {
         <Route path="academic-years" element={<AcademicYearManagement />} />
         <Route path="roles" element={<RoleAccess />} />
       </Route>
+
+      {/* Public TC Verification (QR Scan) - no login required */}
+      <Route path="/verify/:tcNumber" element={<VerifyTC />} />
 
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />

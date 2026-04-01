@@ -1,31 +1,41 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Table from '../../components/Table'
-import { accountsData } from '../../data/mockData'
+import { paymentApi } from '../../services/api'
 import './Accounts.css'
 
 const VerifyPayments = () => {
-  const [payments, setPayments] = useState(accountsData.pendingPayments)
+  const [payments, setPayments] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  const handleApprove = (row) => {
-    if (confirm(`Approve payment from ${row.name}?`)) {
-      setPayments(payments.filter(p => p.id !== row.id))
-      alert('Payment approved successfully!')
-    }
+  const loadPayments = () => {
+    paymentApi.getAll()
+      .then(data => {
+        setPayments(data.filter(p => p.status === 'PENDING'))
+      })
+      .catch(err => console.error('Payment load error:', err))
+      .finally(() => setLoading(false))
   }
 
-  const handleReject = (row) => {
-    if (confirm(`Reject payment from ${row.name}?`)) {
-      setPayments(payments.filter(p => p.id !== row.id))
-      alert('Payment rejected!')
+  useEffect(() => { loadPayments() }, [])
+
+  const handleApprove = async (row) => {
+    if (confirm(`Approve payment #${row.id}?`)) {
+      try {
+        await paymentApi.verify(row.id)
+        alert('Payment approved successfully!')
+        loadPayments()
+      } catch (err) {
+        alert('Failed to approve: ' + err.message)
+      }
     }
   }
 
   const columns = [
     { header: 'Date', field: 'date' },
-    { header: 'Register No', field: 'registerNo' },
-    { header: 'Name', field: 'name' },
-    { header: 'Amount', render: (row) => `₹${row.amount.toLocaleString()}` },
-    { header: 'Method', field: 'method' },
+    { header: 'Student ID', field: 'studentId' },
+    { header: 'Fee Type', field: 'feeType' },
+    { header: 'Amount', render: (row) => `₹${row.amount?.toLocaleString()}` },
+    { header: 'Method', field: 'paymentMethod' },
     { header: 'Transaction ID', field: 'transactionId' },
     { 
       header: 'Status', 
@@ -40,13 +50,10 @@ const VerifyPayments = () => {
       label: 'Approve',
       className: 'btn-success',
       onClick: handleApprove
-    },
-    {
-      label: 'Reject',
-      className: 'btn-danger',
-      onClick: handleReject
     }
   ]
+
+  if (loading) return <div className="page-container"><p>Loading payments...</p></div>
 
   return (
     <div className="page-container">

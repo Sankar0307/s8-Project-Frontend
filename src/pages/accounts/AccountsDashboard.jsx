@@ -1,20 +1,46 @@
+import { useState, useEffect } from 'react'
 import Card from '../../components/Card'
 import Table from '../../components/Table'
-import { accountsData } from '../../data/mockData'
+import { dashboardApi, paymentApi } from '../../services/api'
 import './Accounts.css'
 
 const AccountsDashboard = () => {
-  const { dashboard, studentFeeRecords, pendingPayments } = accountsData
+  const [dashboard, setDashboard] = useState(null)
+  const [payments, setPayments] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  const recentTransactions = studentFeeRecords.slice(0, 5)
+  useEffect(() => {
+    Promise.all([
+      dashboardApi.accounts(),
+      paymentApi.getAll()
+    ])
+      .then(([dashData, payData]) => {
+        setDashboard(dashData)
+        setPayments(payData)
+      })
+      .catch(err => console.error('Dashboard error:', err))
+      .finally(() => setLoading(false))
+  }, [])
+
+  if (loading) return <div className="page-container"><p>Loading dashboard...</p></div>
+  if (!dashboard) return <div className="page-container"><p>Unable to load dashboard.</p></div>
+
+  const pendingPayments = payments.filter(p => p.status === 'PENDING')
 
   const columns = [
-    { header: 'Register No', field: 'registerNo' },
-    { header: 'Name', field: 'name' },
-    { header: 'Department', field: 'department' },
-    { header: 'Total Fee', render: (row) => `₹${row.totalFee.toLocaleString()}` },
-    { header: 'Paid', render: (row) => `₹${row.paid.toLocaleString()}` },
-    { header: 'Pending', render: (row) => `₹${row.pending.toLocaleString()}` }
+    { header: 'ID', field: 'id' },
+    { header: 'Student ID', field: 'studentId' },
+    { header: 'Amount', render: (row) => `₹${row.amount?.toLocaleString()}` },
+    { header: 'Method', field: 'paymentMethod' },
+    { header: 'Date', field: 'date' },
+    { 
+      header: 'Status', 
+      render: (row) => (
+        <span className={`badge badge-${row.status === 'SUCCESS' ? 'success' : 'warning'}`}>
+          {row.status}
+        </span>
+      )
+    }
   ]
 
   return (
@@ -27,57 +53,36 @@ const AccountsDashboard = () => {
       <div className="grid grid-cols-4">
         <Card
           title="Total Collected"
-          value={`₹${(dashboard.totalCollected / 100000).toFixed(1)}L`}
+          value={`₹${(dashboard.totalFeesCollected || 0).toLocaleString()}`}
           icon="💰"
           color="green"
         />
         <Card
-          title="Pending Fees"
-          value={`₹${(dashboard.pendingFees / 100000).toFixed(1)}L`}
+          title="Pending Payments"
+          value={dashboard.pendingPayments || 0}
           icon="⏰"
           color="orange"
         />
         <Card
-          title="Today's Collection"
-          value={`₹${dashboard.todayCollection.toLocaleString()}`}
-          icon="📈"
+          title="Success Payments"
+          value={dashboard.successPayments || 0}
+          icon="✅"
           color="blue"
         />
         <Card
           title="Total Students"
-          value={dashboard.totalStudents}
+          value={dashboard.totalStudents || 0}
           icon="👥"
           color="blue"
         />
       </div>
 
-      <div className="grid grid-cols-2 mt-lg">
-        <div className="card">
-          <div className="card-header">
-            <h3 className="card-title">Recent Student Fee Records</h3>
-          </div>
-          <Table columns={columns} data={recentTransactions} />
+      <div className="card mt-lg">
+        <div className="card-header">
+          <h3 className="card-title">Pending Payment Verifications</h3>
+          <span className="badge badge-warning">{pendingPayments.length} Pending</span>
         </div>
-
-        <div className="card">
-          <div className="card-header">
-            <h3 className="card-title">Pending Payments Verification</h3>
-          </div>
-          <div className="pending-verifications">
-            {pendingPayments.map(payment => (
-              <div key={payment.id} className="verification-item">
-                <div className="flex justify-between">
-                  <div>
-                    <strong>{payment.name}</strong>
-                    <small className="text-gray" style={{display: 'block'}}>{payment.registerNo}</small>
-                  </div>
-                  <span className="font-bold">₹{payment.amount.toLocaleString()}</span>
-                </div>
-                <small className="text-gray">Transaction: {payment.transactionId}</small>
-              </div>
-            ))}
-          </div>
-        </div>
+        <Table columns={columns} data={pendingPayments.slice(0, 10)} />
       </div>
     </div>
   )

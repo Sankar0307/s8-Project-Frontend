@@ -1,42 +1,40 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Table from '../../components/Table'
-import { tcData } from '../../data/mockData'
+import { bonafideApi } from '../../services/api'
 import './TCAdmin.css'
 
 const BonafideRequestList = () => {
   const [filter, setFilter] = useState('All')
-  const { bonafideRequests } = tcData
+  const [requests, setRequests] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    bonafideApi.getAll()
+      .then(data => setRequests(data))
+      .catch(err => console.error('Bonafide load error:', err))
+      .finally(() => setLoading(false))
+  }, [])
 
   const filteredRequests = filter === 'All' 
-    ? bonafideRequests 
-    : bonafideRequests.filter(r => r.status === filter)
+    ? requests 
+    : requests.filter(r => r.status === filter.toUpperCase())
 
   const columns = [
-    { header: 'Register No', field: 'registerNo' },
-    { header: 'Student Name', field: 'name' },
-    { header: 'Department', field: 'department' },
+    { header: 'ID', field: 'id' },
+    { header: 'Student ID', field: 'studentId' },
     { header: 'Applied Date', field: 'appliedDate' },
-    { header: 'Bonafide Type', field: 'bonafideType' },
+    { header: 'Reason', field: 'reason' },
     { 
       header: 'Status', 
       render: (row) => (
-        <span className={`badge badge-${row.status === 'Approved' ? 'success' : row.status === 'Pending' ? 'warning' : 'danger'}`}>
+        <span className={`badge badge-${row.status === 'APPROVED' ? 'success' : row.status === 'PENDING' ? 'warning' : 'danger'}`}>
           {row.status}
         </span>
       )
     }
   ]
 
-  const actions = [
-    {
-      label: 'View',
-      className: 'btn-primary',
-      onClick: (row) => {
-        // In a real app, this would navigate to the approve page with the request ID
-        window.location.href = '/tcadmin/approve-bonafide'
-      }
-    }
-  ]
+  if (loading) return <div className="page-container"><p>Loading bonafide requests...</p></div>
 
   return (
     <div className="page-container">
@@ -50,34 +48,19 @@ const BonafideRequestList = () => {
           <div className="flex justify-between items-center">
             <h3 className="card-title">All Bonafide Requests</h3>
             <div className="filter-buttons">
-              <button 
-                className={`btn btn-sm ${filter === 'All' ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => setFilter('All')}
-              >
-                All
-              </button>
-              <button 
-                className={`btn btn-sm ${filter === 'Pending' ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => setFilter('Pending')}
-              >
-                Pending
-              </button>
-              <button 
-                className={`btn btn-sm ${filter === 'Approved' ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => setFilter('Approved')}
-              >
-                Approved
-              </button>
-              <button 
-                className={`btn btn-sm ${filter === 'Rejected' ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => setFilter('Rejected')}
-              >
-                Rejected
-              </button>
+              {['All', 'Pending', 'Approved', 'Rejected'].map(f => (
+                <button 
+                  key={f}
+                  className={`btn btn-sm ${filter === f ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setFilter(f)}
+                >
+                  {f}
+                </button>
+              ))}
             </div>
           </div>
         </div>
-        <Table columns={columns} data={filteredRequests} actions={actions} />
+        <Table columns={columns} data={filteredRequests} />
       </div>
     </div>
   )

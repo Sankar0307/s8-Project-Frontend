@@ -1,33 +1,54 @@
+import { useState, useEffect } from 'react'
 import Table from '../../components/Table'
-import { studentData } from '../../data/mockData'
+import { useAuth } from '../../context/AuthContext'
+import { paymentApi, tcApi } from '../../services/api'
 import './Student.css'
 
 const PaymentHistory = () => {
-  const { paymentHistory } = studentData
+  const { userId } = useAuth()
+  const [payments, setPayments] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        if (!userId) return
+        let resolvedStudentId = userId
+        try {
+          const student = await tcApi.getStudentProfile(userId)
+          resolvedStudentId = student?.id || userId
+        } catch (_) {
+          // Fallback when user-student profile link is missing.
+        }
+        const data = await paymentApi.getAll()
+        const myPayments = Array.isArray(data) ? data.filter(p => p.studentId === resolvedStudentId) : []
+        setPayments(myPayments)
+      } catch (err) {
+        console.error('Payment history error:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [userId])
 
   const columns = [
     { header: 'Date', field: 'date' },
     { header: 'Fee Type', field: 'feeType' },
-    { header: 'Amount', render: (row) => `₹${row.amount.toLocaleString()}` },
-    { header: 'Payment Method', field: 'method' },
+    { header: 'Amount', render: (row) => `₹${row.amount?.toLocaleString()}` },
+    { header: 'Payment Method', field: 'paymentMethod' },
     { header: 'Transaction ID', field: 'transactionId' },
     { 
       header: 'Status', 
       render: (row) => (
-        <span className={`badge badge-${row.status === 'Success' ? 'success' : 'danger'}`}>
+        <span className={`badge badge-${row.status === 'SUCCESS' ? 'success' : 'warning'}`}>
           {row.status}
         </span>
       )
     }
   ]
 
-  const actions = [
-    {
-      label: 'Download Receipt',
-      className: 'btn-primary',
-      onClick: (row) => alert(`Downloading receipt for transaction ${row.transactionId}`)
-    }
-  ]
+  if (loading) return <div className="page-container"><p>Loading payment history...</p></div>
 
   return (
     <div className="page-container">
@@ -40,7 +61,7 @@ const PaymentHistory = () => {
         <div className="card-header">
           <h3 className="card-title">Transaction History</h3>
         </div>
-        <Table columns={columns} data={paymentHistory} actions={actions} />
+        <Table columns={columns} data={payments} />
       </div>
     </div>
   )

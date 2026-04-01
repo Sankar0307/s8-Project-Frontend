@@ -1,15 +1,17 @@
 import { useState } from 'react'
-import { studentData } from '../../data/mockData'
+import { useAuth } from '../../context/AuthContext'
+import { bonafideApi } from '../../services/api'
 import FormInput from '../../components/FormInput'
 import './Student.css'
 
 const ApplyBonafide = () => {
-  const { profile } = studentData
+  const { user, userId } = useAuth()
   const [formData, setFormData] = useState({
     reason: '',
     bonafideType: 'With Fee Structure'
   })
   const [success, setSuccess] = useState(false)
+  const [error, setError] = useState('')
 
   const handleChange = (e) => {
     setFormData({
@@ -18,13 +20,23 @@ const ApplyBonafide = () => {
     })
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    setSuccess(true)
-    setTimeout(() => {
-      setSuccess(false)
-      setFormData({ reason: '', bonafideType: 'With Fee Structure' })
-    }, 3000)
+    setError('')
+    try {
+      await bonafideApi.apply({
+        studentId: userId,
+        reason: formData.reason + ' (' + formData.bonafideType + ')',
+        appliedDate: new Date().toISOString().split('T')[0]
+      })
+      setSuccess(true)
+      setTimeout(() => {
+        setSuccess(false)
+        setFormData({ reason: '', bonafideType: 'With Fee Structure' })
+      }, 3000)
+    } catch (err) {
+      setError(err.message || 'Failed to submit bonafide request')
+    }
   }
 
   const handleReset = () => {
@@ -43,6 +55,7 @@ const ApplyBonafide = () => {
           ✅ Bonafide request submitted successfully!
         </div>
       )}
+      {error && <div className="alert alert-danger">{error}</div>}
 
       <div className="card" style={{ maxWidth: '700px' }}>
         <div className="card-header">
@@ -50,37 +63,7 @@ const ApplyBonafide = () => {
         </div>
         
         <form onSubmit={handleSubmit}>
-          <FormInput
-            label="Student Name"
-            type="text"
-            value={profile.name}
-            disabled
-            readOnly
-          />
-
-          <FormInput
-            label="Register Number"
-            type="text"
-            value={profile.registerNumber}
-            disabled
-            readOnly
-          />
-
-          <FormInput
-            label="Department"
-            type="text"
-            value={profile.department}
-            disabled
-            readOnly
-          />
-
-          <FormInput
-            label="Academic Year"
-            type="text"
-            value={profile.year}
-            disabled
-            readOnly
-          />
+          <FormInput label="Student Name" type="text" value={user?.name || ''} disabled readOnly />
 
           <FormInput
             label="Reason for Bonafide"

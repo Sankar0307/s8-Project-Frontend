@@ -1,20 +1,33 @@
-import { Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import Table from '../../components/Table'
-import { studentData } from '../../data/mockData'
+import { Link } from 'react-router-dom'
+import { bonafideApi } from '../../services/api'
+import { useAuth } from '../../context/AuthContext'
 import './Student.css'
 
 const BonafideStatus = () => {
-  const { bonafideRequests } = studentData
+  const { userId } = useAuth()
+  const [requests, setRequests] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    bonafideApi.getAll()
+      .then(data => {
+        const myRequests = userId ? data.filter(r => r.studentId === userId) : data
+        setRequests(myRequests)
+      })
+      .catch(err => console.error('Bonafide status error:', err))
+      .finally(() => setLoading(false))
+  }, [userId])
 
   const columns = [
-    { header: 'Request ID', field: 'requestId' },
+    { header: 'ID', field: 'id' },
     { header: 'Applied Date', field: 'appliedDate' },
-    { header: 'Bonafide Type', field: 'bonafideType' },
     { header: 'Reason', field: 'reason' },
     { 
       header: 'Status', 
       render: (row) => (
-        <span className={`badge badge-${row.status === 'Approved' ? 'success' : row.status === 'Pending' ? 'warning' : 'danger'}`}>
+        <span className={`badge badge-${row.status === 'APPROVED' ? 'success' : row.status === 'PENDING' ? 'warning' : 'danger'}`}>
           {row.status}
         </span>
       )
@@ -22,24 +35,22 @@ const BonafideStatus = () => {
     {
       header: 'Action',
       render: (row) => {
-        if (row.status === 'Approved') {
+        if (row.status === 'APPROVED') {
           return (
             <Link to="/student/download-bonafide" className="btn btn-success btn-sm">
               Download Bonafide
             </Link>
           )
-        } else if (row.status === 'Rejected') {
-          return (
-            <span className="text-sm text-gray" title={row.rejectionRemark}>
-              {row.rejectionRemark}
-            </span>
-          )
+        } else if (row.status === 'REJECTED') {
+          return <span className="text-sm text-gray">Rejected</span>
         } else {
           return <span className="text-sm text-gray">Processing...</span>
         }
       }
     }
   ]
+
+  if (loading) return <div className="page-container"><p>Loading bonafide status...</p></div>
 
   return (
     <div className="page-container">
@@ -52,7 +63,7 @@ const BonafideStatus = () => {
         <div className="card-header">
           <h3 className="card-title">My Bonafide Requests</h3>
         </div>
-        <Table columns={columns} data={bonafideRequests} />
+        <Table columns={columns} data={requests} />
       </div>
     </div>
   )

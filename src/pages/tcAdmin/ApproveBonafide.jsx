@@ -1,130 +1,97 @@
-import { useState } from 'react'
-import { tcData } from '../../data/mockData'
-import FormInput from '../../components/FormInput'
+import { useState, useEffect } from 'react'
+import { bonafideApi } from '../../services/api'
 import './TCAdmin.css'
 
 const ApproveBonafide = () => {
-  // Get a pending request as example
-  const pendingRequest = tcData.bonafideRequests.find(req => req.status === 'Pending') || tcData.bonafideRequests[0]
-  
-  const [remarks, setRemarks] = useState('')
-  const [showSuccess, setShowSuccess] = useState(false)
-  const [actionType, setActionType] = useState('')
+  const [pendingRequests, setPendingRequests] = useState([])
+  const [currentRequest, setCurrentRequest] = useState(null)
+  const [success, setSuccess] = useState('')
+  const [loading, setLoading] = useState(true)
 
-  const handleApprove = () => {
-    setActionType('approved')
-    setShowSuccess(true)
-    setTimeout(() => {
-      setShowSuccess(false)
-      setRemarks('')
-    }, 3000)
+  const loadRequests = () => {
+    bonafideApi.getAll()
+      .then(data => {
+        const pending = data.filter(r => r.status === 'PENDING')
+        setPendingRequests(pending)
+        setCurrentRequest(pending.length > 0 ? pending[0] : null)
+      })
+      .catch(err => console.error('Load error:', err))
+      .finally(() => setLoading(false))
   }
 
-  const handleReject = () => {
-    if (!remarks.trim()) {
-      alert('Please provide remarks for rejection')
-      return
+  useEffect(() => { loadRequests() }, [])
+
+  const handleApprove = async () => {
+    if (!currentRequest) return
+    if (confirm(`Approve bonafide request #${currentRequest.id}?`)) {
+      try {
+        await bonafideApi.approve(currentRequest.id)
+        setSuccess('approved')
+        setTimeout(() => { setSuccess(''); loadRequests() }, 2000)
+      } catch (err) {
+        alert('Failed to approve: ' + err.message)
+      }
     }
-    setActionType('rejected')
-    setShowSuccess(true)
-    setTimeout(() => {
-      setShowSuccess(false)
-      setRemarks('')
-    }, 3000)
+  }
+
+  if (loading) return <div className="page-container"><p>Loading requests...</p></div>
+
+  if (!currentRequest) {
+    return (
+      <div className="page-container">
+        <div className="page-header">
+          <h2 className="page-title">Approve Bonafide Request</h2>
+        </div>
+        <div className="alert alert-info">
+          ℹ️ No pending bonafide requests to review.
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="page-container">
       <div className="page-header">
-        <h2 className="page-title">Approve / Reject Bonafide Request</h2>
-        <p className="page-subtitle">Review and process bonafide certificate request</p>
+        <h2 className="page-title">Approve Bonafide Request</h2>
+        <p className="page-subtitle">{pendingRequests.length} pending requests</p>
       </div>
 
-      {showSuccess && (
-        <div className={`alert alert-${actionType === 'approved' ? 'success' : 'danger'}`}>
-          {actionType === 'approved' 
-            ? '✅ Bonafide request approved successfully!' 
-            : '❌ Bonafide request rejected.'}
+      {success && (
+        <div className="alert alert-success">
+          ✅ Bonafide request #{currentRequest.id} approved!
         </div>
       )}
 
-      <div className="grid grid-cols-2" style={{ gap: 'var(--spacing-lg)' }}>
-        {/* Student Details Section */}
-        <div className="card">
-          <div className="card-header">
-            <h3 className="card-title">Student Details</h3>
-          </div>
-          
-          <div className="profile-summary">
-            <div className="profile-item">
-              <span className="profile-label">Name:</span>
-              <span className="profile-value">{pendingRequest.name}</span>
-            </div>
-            <div className="profile-item">
-              <span className="profile-label">Register No:</span>
-              <span className="profile-value">{pendingRequest.registerNo}</span>
-            </div>
-            <div className="profile-item">
-              <span className="profile-label">Department:</span>
-              <span className="profile-value">{pendingRequest.department}</span>
-            </div>
-            <div className="profile-item">
-              <span className="profile-label">Year:</span>
-              <span className="profile-value">{pendingRequest.year}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Request Details Section */}
-        <div className="card">
-          <div className="card-header">
-            <h3 className="card-title">Request Details</h3>
-          </div>
-          
-          <div className="profile-summary">
-            <div className="profile-item">
-              <span className="profile-label">Applied Date:</span>
-              <span className="profile-value">{pendingRequest.appliedDate}</span>
-            </div>
-            <div className="profile-item">
-              <span className="profile-label">Bonafide Type:</span>
-              <span className="profile-value">{pendingRequest.bonafideType}</span>
-            </div>
-            <div className="profile-item">
-              <span className="profile-label">Reason:</span>
-              <span className="profile-value">{pendingRequest.reason}</span>
-            </div>
-            <div className="profile-item">
-              <span className="profile-label">Current Status:</span>
-              <span className={`badge badge-${pendingRequest.status === 'Approved' ? 'success' : pendingRequest.status === 'Pending' ? 'warning' : 'danger'}`}>
-                {pendingRequest.status}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Action Section */}
-      <div className="card mt-lg">
+      <div className="card" style={{ maxWidth: '600px' }}>
         <div className="card-header">
-          <h3 className="card-title">Action</h3>
+          <h3 className="card-title">Request Details</h3>
+        </div>
+        <div className="tc-status-details">
+          <div className="status-row">
+            <span className="status-label">Request ID:</span>
+            <span>{currentRequest.id}</span>
+          </div>
+          <div className="status-row">
+            <span className="status-label">Student ID:</span>
+            <span>{currentRequest.studentId}</span>
+          </div>
+          <div className="status-row">
+            <span className="status-label">Applied Date:</span>
+            <span>{currentRequest.appliedDate}</span>
+          </div>
+          <div className="status-row">
+            <span className="status-label">Reason:</span>
+            <span>{currentRequest.reason}</span>
+          </div>
+          <div className="status-row">
+            <span className="status-label">Status:</span>
+            <span className="badge badge-warning">{currentRequest.status}</span>
+          </div>
         </div>
 
-        <FormInput
-          label="Remarks (Required for rejection)"
-          type="textarea"
-          value={remarks}
-          onChange={(e) => setRemarks(e.target.value)}
-          placeholder="Enter remarks or reason for your decision..."
-          rows={4}
-        />
-
-        <div style={{ display: 'flex', gap: 'var(--spacing-md)', marginTop: 'var(--spacing-lg)' }}>
-          <button onClick={handleApprove} className="btn btn-success" style={{ flex: 1 }}>
-            ✅ Approve
-          </button>
-          <button onClick={handleReject} className="btn btn-danger" style={{ flex: 1 }}>
-            ❌ Reject
+        <div className="action-buttons" style={{marginTop: '20px'}}>
+          <button onClick={handleApprove} className="btn btn-success flex-1">
+            ✅ Approve Bonafide
           </button>
         </div>
       </div>

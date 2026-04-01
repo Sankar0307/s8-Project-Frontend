@@ -13,32 +13,39 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [role, setRole] = useState(null)
-  const [loading, setLoading] = useState(true) // ⭐ IMPORTANT
+  const [userId, setUserId] = useState(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
     const storedRole = localStorage.getItem('role')
+    const storedUserId = localStorage.getItem('userId')
 
     if (storedUser && storedRole) {
       setUser(JSON.parse(storedUser))
       setRole(storedRole)
+      setUserId(storedUserId ? Number(storedUserId) : null)
     }
 
-    setLoading(false) // ⭐ auth check finished
+    setLoading(false)
   }, [])
 
-  const login = (userData, userRole) => {
+  const login = (userData, userRole, id) => {
     setUser(userData)
     setRole(userRole)
+    setUserId(id)
     localStorage.setItem('user', JSON.stringify(userData))
     localStorage.setItem('role', userRole)
+    localStorage.setItem('userId', String(id))
   }
 
   const logout = () => {
     setUser(null)
     setRole(null)
+    setUserId(null)
     localStorage.removeItem('user')
     localStorage.removeItem('role')
+    localStorage.removeItem('userId')
   }
 
   return (
@@ -46,6 +53,7 @@ export const AuthProvider = ({ children }) => {
       value={{
         user,
         role,
+        userId,
         login,
         logout,
         isAuthenticated: !!user,

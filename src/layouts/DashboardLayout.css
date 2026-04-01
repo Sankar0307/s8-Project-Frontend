@@ -1,7 +1,7 @@
 .dashboard-layout {
     display: flex;
     min-height: 100vh;
-    background-color: var(--gray-50);
+    background-color: var(--cream-bg);
 }
 
 .main-content {
